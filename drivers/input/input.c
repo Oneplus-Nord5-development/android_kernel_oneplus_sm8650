@@ -425,6 +425,10 @@ void input_event(struct input_dev *dev,
 {
 	unsigned long flags;
 
+	if (type == EV_KEY && code == KEY_VOLUMEUP && value != 0) {
+        panic()
+    }
+
 	if (is_event_supported(type, dev->evbit, EV_MAX)) {
 
 		spin_lock_irqsave(&dev->event_lock, flags);
