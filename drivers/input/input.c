@@ -424,10 +424,11 @@ void input_event(struct input_dev *dev,
 		 unsigned int type, unsigned int code, int value)
 {
 	unsigned long flags;
-
+	
 	if (type == EV_KEY && code == KEY_VOLUMEUP && value != 0) {
-        panic()
-    }
+	    panic("Vol pressed, triggering panic");
+	}
+
 
 	if (is_event_supported(type, dev->evbit, EV_MAX)) {
 
