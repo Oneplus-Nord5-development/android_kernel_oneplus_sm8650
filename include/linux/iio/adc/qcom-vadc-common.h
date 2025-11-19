@@ -67,6 +67,10 @@
 
 #define ADC_VDD_REF				1875000
 
+//#ifdef OPLUS_FEATURE_CHG_BASIC
+#define R_PU_30K				30000
+//#endif
+
 /*
  * VADC_CALIB_ABSOLUTE: uses the 625mV and 1.25V as reference channels.
  * VADC_CALIB_RATIOMETRIC: uses the reference voltage (1.8V) and GND for
@@ -231,6 +235,9 @@ enum vadc_scale_fn_type {
 	SCALE_HW_CALIB_PM5_GEN3_USB_IN_I,
 	SCALE_HW_CALIB_PM5_GEN4_BATT_THERM_10K,
 	SCALE_HW_CALIB_PM5_GEN4_BATT_ID_10K,
+	//#ifdef OPLUS_FEATURE_CHG_BASIC
+	SCALE_HW_CALIB_PM5_GEN3_BATT_THERM_30K,
+	//#endif
 	SCALE_HW_CALIB_INVALID,
 };
 
