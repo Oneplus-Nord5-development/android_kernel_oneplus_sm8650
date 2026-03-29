@@ -1008,6 +1008,19 @@ static struct sk_buff *package_for_tx(struct f_ncm *ncm)
 	return skb2;
 }
 
+static void ncm_free_tx_skbs(struct f_ncm *ncm)
+{
+	if (ncm->skb_tx_data) {
+		dev_kfree_skb_any(ncm->skb_tx_data);
+		ncm->skb_tx_data = NULL;
+	}
+
+	if (ncm->skb_tx_ndp) {
+		dev_kfree_skb_any(ncm->skb_tx_ndp);
+		ncm->skb_tx_ndp = NULL;
+	}
+}
+
 static struct sk_buff *ncm_wrap_ntb(struct gether *port,
 				    struct sk_buff *skb)
 {
@@ -1137,10 +1150,7 @@ err:
 
 	if (skb)
 		dev_kfree_skb_any(skb);
-	if (ncm->skb_tx_data)
-		dev_kfree_skb_any(ncm->skb_tx_data);
-	if (ncm->skb_tx_ndp)
-		dev_kfree_skb_any(ncm->skb_tx_ndp);
+	ncm_free_tx_skbs(ncm);
 
 	return NULL;
 }
@@ -1663,6 +1673,7 @@ static void ncm_free(struct usb_function *f)
 
 	ncm = func_to_ncm(f);
 	opts = container_of(f->fi, struct f_ncm_opts, func_inst);
+	ncm_free_tx_skbs(ncm);
 	kfree(ncm);
 	mutex_lock(&opts->lock);
 	opts->refcnt--;
@@ -1676,6 +1687,7 @@ static void ncm_unbind(struct usb_configuration *c, struct usb_function *f)
 	DBG(c->cdev, "ncm unbind\n");
 
 	hrtimer_cancel(&ncm->task_timer);
+	ncm_free_tx_skbs(ncm);
 
 	kfree(f->os_desc_table);
 	f->os_desc_n = 0;
