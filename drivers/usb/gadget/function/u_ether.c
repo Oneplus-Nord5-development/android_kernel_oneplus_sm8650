@@ -403,6 +403,23 @@ done:
 	return status;
 }
 
+static void free_requests(struct list_head *list, struct usb_ep *ep,
+			  spinlock_t *req_lock)
+{
+	struct usb_request *req;
+
+	spin_lock(req_lock);
+	while (!list_empty(list)) {
+		req = list_first_entry(list, struct usb_request, list);
+		list_del(&req->list);
+
+		spin_unlock(req_lock);
+		usb_ep_free_request(ep, req);
+		spin_lock(req_lock);
+	}
+	spin_unlock(req_lock);
+}
+
 static void rx_fill(struct eth_dev *dev, gfp_t gfp_flags)
 {
 	struct usb_request	*req;
@@ -1143,9 +1160,12 @@ struct net_device *gether_connect(struct gether *link)
 		(void) usb_ep_disable(link->out_ep);
 fail1:
 		(void) usb_ep_disable(link->in_ep);
+		free_requests(&dev->tx_reqs, link->in_ep, &dev->req_lock);
+		free_requests(&dev->rx_reqs, link->out_ep, &dev->req_lock);
+		link->in_ep->desc = NULL;
+		link->out_ep->desc = NULL;
 	}
 fail0:
-	/* caller is responsible for cleanup on error */
 	if (result < 0)
 		return ERR_PTR(result);
 	return dev->net;
@@ -1167,7 +1187,6 @@ EXPORT_SYMBOL_GPL(gether_connect);
 void gether_disconnect(struct gether *link)
 {
 	struct eth_dev		*dev = link->ioport;
-	struct usb_request	*req;
 
 	WARN_ON(!dev);
 	if (!dev)
@@ -1183,29 +1202,11 @@ void gether_disconnect(struct gether *link)
 	 * and forget about the endpoints.
 	 */
 	usb_ep_disable(link->in_ep);
-	spin_lock(&dev->req_lock);
-	while (!list_empty(&dev->tx_reqs)) {
-		req = list_first_entry(&dev->tx_reqs, struct usb_request, list);
-		list_del(&req->list);
-
-		spin_unlock(&dev->req_lock);
-		usb_ep_free_request(link->in_ep, req);
-		spin_lock(&dev->req_lock);
-	}
-	spin_unlock(&dev->req_lock);
+	free_requests(&dev->tx_reqs, link->in_ep, &dev->req_lock);
 	link->in_ep->desc = NULL;
 
 	usb_ep_disable(link->out_ep);
-	spin_lock(&dev->req_lock);
-	while (!list_empty(&dev->rx_reqs)) {
-		req = list_first_entry(&dev->rx_reqs, struct usb_request, list);
-		list_del(&req->list);
-
-		spin_unlock(&dev->req_lock);
-		usb_ep_free_request(link->out_ep, req);
-		spin_lock(&dev->req_lock);
-	}
-	spin_unlock(&dev->req_lock);
+	free_requests(&dev->rx_reqs, link->out_ep, &dev->req_lock);
 	link->out_ep->desc = NULL;
 
 	/* finish forgetting about this USB link episode */
