@@ -618,16 +618,6 @@ int copy_dmabuf_info(u64 clone_flags, struct task_struct *task)
 	if (share_vm && share_fs) {
 		refcount_inc(&parent_dmabuf_info->refcnt);
 		task->dmabuf_info = parent_dmabuf_info;
-
-		if (task->mm) {
-			refcount_inc(&task->dmabuf_info->refcnt);
-			task->mm->abi_extend->dmabuf_info = task->dmabuf_info;
-		}
-
-		if (task->files) {
-			refcount_inc(&task->dmabuf_info->refcnt);
-			task->files->dmabuf_info = task->dmabuf_info;
-		}
 		return 0;
 	}
 
